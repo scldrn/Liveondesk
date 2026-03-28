@@ -15,21 +15,30 @@ struct WindowPlatform: Equatable {
 
 class WindowDetector {
     var onWindowsChanged: (([WindowPlatform]) -> Void)?
-    private var timer: Timer?
+    private var pollTask: Task<Void, Never>?
     private var lastPlatforms: [CGWindowID: WindowPlatform] = [:]
-
+    @MainActor
     func start() {
-        poll()
-        timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
+        stop()
+        pollTask = Task { @MainActor [weak self] in
+            // Primer poll inmediato
             self?.poll()
+            
+            while !Task.isCancelled {
+                // Suspendemos por ~0.5s permitiendo que el hilo libere recursos
+                try? await Task.sleep(nanoseconds: 500_000_000)
+                if Task.isCancelled { break }
+                self?.poll()
+            }
         }
     }
 
     func stop() {
-        timer?.invalidate()
-        timer = nil
+        pollTask?.cancel()
+        pollTask = nil
     }
 
+    @MainActor
     private func poll() {
         guard let screen = NSScreen.main else { return }
         let screenHeight = screen.frame.height
