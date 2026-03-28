@@ -13,7 +13,7 @@ struct LiveOnDeskApp: App {
         // Sin WindowGroup — el panel lo gestiona AppDelegate.
         // Settings sirve como punto de entrada a preferencias futuras.
         Settings {
-            EmptyView()
+            SettingsView()
         }
     }
 }
